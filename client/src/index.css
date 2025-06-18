@@ -1,0 +1,9 @@
+body {
+  margin: 0;
+  font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+  background: #ece5dd;
+}
+
+#root {
+  height: 100vh;
+} 

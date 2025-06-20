@@ -7,6 +7,9 @@ import MessageInput from './MessageInput';
 import TypingIndicator from './TypingIndicator';
 import MessageBubble from './MessageBubble';
 import config from '../config';
+import Modal from '@mui/material/Modal';
+import IconButton from '@mui/material/IconButton';
+import CloseIcon from '@mui/icons-material/Close';
 
 const ChatWindow = ({ selectedChat, selectedUser }) => {
   const { user } = useAuth();
@@ -16,6 +19,8 @@ const ChatWindow = ({ selectedChat, selectedUser }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [otherTyping, setOtherTyping] = useState(false);
   const typingTimeout = useRef();
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [modalImageUrl, setModalImageUrl] = useState(null);
 
   // Define chatUser at the top before any useEffect
   const chatUser = selectedUser || selectedChat?.users?.find(u => u._id !== user._id);
@@ -127,6 +132,15 @@ const ChatWindow = ({ selectedChat, selectedUser }) => {
     return () => socket.off('messages-seen', handleMessagesSeen);
   }, [selectedChat]);
 
+  const handleImageClick = (url) => {
+    setModalImageUrl(url);
+    setImageModalOpen(true);
+  };
+  const handleModalClose = () => {
+    setImageModalOpen(false);
+    setModalImageUrl(null);
+  };
+
   if (!selectedChat && !selectedUser) {
     return (
       <Box sx={{ flex: 1, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.secondary' }}>
@@ -154,7 +168,7 @@ const ChatWindow = ({ selectedChat, selectedUser }) => {
         {loading ? <CircularProgress /> : (
           <>
             {messages.map(msg => (
-              <MessageBubble key={msg._id} message={msg} />
+              <MessageBubble key={msg._id} message={msg} onImageClick={handleImageClick} />
             ))}
             {/* Show animated typing indicator in message area if other user is typing */}
             {otherTyping && <TypingIndicator isTyping={true} />}
@@ -166,6 +180,37 @@ const ChatWindow = ({ selectedChat, selectedUser }) => {
       <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', bgcolor: '#f0f0f0' }}>
         <MessageInput onSend={handleSend} disabled={!chatUser} onInput={handleTyping} />
       </Box>
+      {/* Image Modal */}
+      <Modal
+        open={imageModalOpen}
+        onClose={handleModalClose}
+        aria-labelledby="image-modal-title"
+        aria-describedby="image-modal-description"
+        sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Box sx={{ position: 'relative', outline: 'none' }}>
+          <IconButton
+            onClick={handleModalClose}
+            sx={{ position: 'absolute', top: 8, right: 8, zIndex: 2, bgcolor: 'rgba(255,255,255,0.7)' }}
+            aria-label="Close"
+          >
+            <CloseIcon fontSize="large" />
+          </IconButton>
+          {modalImageUrl && (
+            <img
+              src={modalImageUrl}
+              alt="Enlarged preview"
+              style={{
+                maxWidth: '90vw',
+                maxHeight: '90vh',
+                borderRadius: 12,
+                boxShadow: '0 4px 32px rgba(0,0,0,0.25)',
+                display: 'block',
+              }}
+            />
+          )}
+        </Box>
+      </Modal>
     </Box>
   );
 };

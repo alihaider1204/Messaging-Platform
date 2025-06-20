@@ -12,7 +12,7 @@ import TableChartIcon from '@mui/icons-material/TableChart';
 import TextSnippetIcon from '@mui/icons-material/TextSnippet';
 import ArchiveIcon from '@mui/icons-material/Archive';
 
-const MessageBubble = ({ message }) => {
+const MessageBubble = ({ message, onImageClick }) => {
   const { user } = useAuth();
   const isMine = message.sender?._id === user._id || message.sender === user._id;
   
@@ -56,8 +56,10 @@ const MessageBubble = ({ message }) => {
                 maxHeight: '300px',
                 borderRadius: 8, 
                 marginBottom: 4,
-                objectFit: 'cover'
+                objectFit: 'cover',
+                cursor: onImageClick ? 'pointer' : 'default',
               }} 
+              onClick={onImageClick ? () => onImageClick(`${config.BACKEND_URL}${message.fileUrl}`) : undefined}
               onError={(e) => {
                 console.error('Image failed to load:', message.fileUrl);
                 e.target.style.display = 'none';

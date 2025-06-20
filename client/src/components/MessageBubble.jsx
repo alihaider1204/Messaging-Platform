@@ -5,6 +5,12 @@ import { useAuth } from '../context/AuthContext';
 import DoneIcon from '@mui/icons-material/Done';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import config from '../config';
+import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import DescriptionIcon from '@mui/icons-material/Description';
+import TableChartIcon from '@mui/icons-material/TableChart';
+import TextSnippetIcon from '@mui/icons-material/TextSnippet';
+import ArchiveIcon from '@mui/icons-material/Archive';
 
 const MessageBubble = ({ message }) => {
   const { user } = useAuth();
@@ -73,16 +79,28 @@ const MessageBubble = ({ message }) => {
             )}
           </Box>
         ) : hasFile && !isImage ? (
-          /* Render non-image file as download link */
-          <Box>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              📎 <a 
+          /* Render non-image file as download link with icon and file name */
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+            {/* File type icon */}
+            {(() => {
+              const ext = message.fileUrl.split('.').pop().toLowerCase();
+              if (["pdf"].includes(ext)) return <PictureAsPdfIcon color="error" sx={{ mr: 1 }} />;
+              if (["doc", "docx"].includes(ext)) return <DescriptionIcon color="primary" sx={{ mr: 1 }} />;
+              if (["xls", "xlsx", "csv"].includes(ext)) return <TableChartIcon color="success" sx={{ mr: 1 }} />;
+              if (["txt", "md"].includes(ext)) return <TextSnippetIcon color="action" sx={{ mr: 1 }} />;
+              if (["zip", "rar", "7z", "tar", "gz"].includes(ext)) return <ArchiveIcon color="secondary" sx={{ mr: 1 }} />;
+              return <InsertDriveFileIcon sx={{ mr: 1 }} />;
+            })()}
+            {/* File name as download link */}
+            <Typography variant="body2" component="span">
+              <a 
                 href={`${config.BACKEND_URL}${message.fileUrl}`} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                style={{ color: 'inherit', textDecoration: 'underline' }}
+                download
+                style={{ color: 'inherit', textDecoration: 'underline', fontWeight: 500 }}
               >
-                {message.content || 'Download file'}
+                {message.fileUrl.split('/').pop()}
               </a>
             </Typography>
           </Box>

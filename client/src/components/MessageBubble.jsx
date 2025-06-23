@@ -49,7 +49,7 @@ const MessageBubble = ({ message, onImageClick }) => {
         {isImage && hasFile ? (
           <Box>
             <img 
-              src={`${config.BACKEND_URL}${message.fileUrl}`} 
+              src={message.fileUrl} 
               alt="attachment" 
               style={{ 
                 maxWidth: '100%', 
@@ -59,7 +59,7 @@ const MessageBubble = ({ message, onImageClick }) => {
                 objectFit: 'cover',
                 cursor: onImageClick ? 'pointer' : 'default',
               }} 
-              onClick={onImageClick ? () => onImageClick(`${config.BACKEND_URL}${message.fileUrl}`) : undefined}
+              onClick={onImageClick ? () => onImageClick(message.fileUrl) : undefined}
               onError={(e) => {
                 console.error('Image failed to load:', message.fileUrl);
                 e.target.style.display = 'none';
@@ -96,7 +96,7 @@ const MessageBubble = ({ message, onImageClick }) => {
             {/* File name as download link */}
             <Typography variant="body2" component="span">
               <a 
-                href={`${config.BACKEND_URL}${message.fileUrl}`} 
+                href={message.fileUrl} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 download

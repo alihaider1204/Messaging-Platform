@@ -37,7 +37,7 @@ whatsapp-clone/
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/whatsapp-clone.git
+git clone https://github.com/alihaider1204/whatsapp-clone.git
 cd whatsapp-clone
 ```
 

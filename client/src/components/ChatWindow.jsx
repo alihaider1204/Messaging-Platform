@@ -106,6 +106,8 @@ const ChatWindow = ({ selectedChat, selectedUser }) => {
     }
     setMessages((prev) => [...prev, newMsg]);
     socket.emit('send-message', { message: newMsg, receiverId: chatUser._id });
+    // Emit to self as well to trigger sidebar update
+    socket.emit('send-message', { message: newMsg, receiverId: user._id });
     socket.emit('stop-typing', { chatId: chat_id, senderId: user._id, receiverId: chatUser._id });
   };
 

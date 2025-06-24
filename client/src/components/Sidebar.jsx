@@ -116,7 +116,7 @@ const Sidebar = ({ selectedChat, onSelectChat, onlineUsers }) => {
                 primary={otherUser.name}
                 secondary={lastMsg ? (
                   <span>
-                    {lastMsg.type === 'file' ? '📎 Attachment' : lastMsg.content}
+                    {(lastMsg.type === 'file' || lastMsg.type === 'image' || lastMsg.fileUrl) ? '📎 Attachment' : lastMsg.content}
                     <span style={{ float: 'right', color: '#888', fontSize: 12 }}>
                       {moment(lastMsg.createdAt).format('h:mm A')}
                     </span>

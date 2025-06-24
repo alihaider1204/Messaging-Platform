@@ -26,3 +26,5 @@ dist-ssr
 uploads/
 dist/
 build/
+server/.env
+client/.env

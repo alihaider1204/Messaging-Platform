@@ -44,26 +44,42 @@ const Sidebar = ({ selectedChat, onSelectChat, onlineUsers }) => {
     const handleReceive = (msg) => {
       setLastMessages(prev => ({ ...prev, [msg.chat]: msg }));
       // If chat is not in the list, refetch chats
-      if (!chats.find(c => c._id === msg.chat)) {
+      setChats(prevChats => {
+        if (!prevChats.find(c => c._id === msg.chat)) {
+          api.get(`/chats/${user._id}`).then(res => setChats(res.data));
+        }
+        return prevChats;
+      });
+    };
+    socket.on('receive-message', handleReceive);
+    // Listen for new-chat event
+    const handleNewChat = ({ chatId, users }) => {
+      if (users.includes(user._id)) {
         api.get(`/chats/${user._id}`).then(res => setChats(res.data));
       }
     };
-    socket.on('receive-message', handleReceive);
-    return () => socket.off('receive-message', handleReceive);
-  }, [chats, user]);
+    socket.on('new-chat', handleNewChat);
+    return () => {
+      socket.off('receive-message', handleReceive);
+      socket.off('new-chat', handleNewChat);
+    };
+  }, [user]);
 
   // Also update last message when you send a message
   useEffect(() => {
     if (!user) return;
     const handleSend = (msg) => {
       setLastMessages(prev => ({ ...prev, [msg.chat]: msg }));
-      if (!chats.find(c => c._id === msg.chat)) {
-        api.get(`/chats/${user._id}`).then(res => setChats(res.data));
-      }
+      setChats(prevChats => {
+        if (!prevChats.find(c => c._id === msg.chat)) {
+          api.get(`/chats/${user._id}`).then(res => setChats(res.data));
+        }
+        return prevChats;
+      });
     };
     socket.on('send-message', handleSend);
     return () => socket.off('send-message', handleSend);
-  }, [chats, user]);
+  }, [user]);
 
   // Early return ONLY after ALL hooks are declared
   if (!user) return null;

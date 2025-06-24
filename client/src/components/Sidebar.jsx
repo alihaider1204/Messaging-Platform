@@ -42,10 +42,11 @@ const Sidebar = ({ selectedChat, onSelectChat, onlineUsers }) => {
   useEffect(() => {
     if (!user) return;
     const handleReceive = (msg) => {
-      setLastMessages(prev => ({ ...prev, [msg.chat]: msg }));
+      const chatId = msg.chat || msg.chatId;
+      setLastMessages(prev => ({ ...prev, [chatId]: msg }));
       // If chat is not in the list, refetch chats
       setChats(prevChats => {
-        if (!prevChats.find(c => c._id === msg.chat)) {
+        if (!prevChats.find(c => c._id === chatId)) {
           api.get(`/chats/${user._id}`).then(res => setChats(res.data));
         }
         return prevChats;
@@ -69,9 +70,10 @@ const Sidebar = ({ selectedChat, onSelectChat, onlineUsers }) => {
   useEffect(() => {
     if (!user) return;
     const handleSend = (msg) => {
-      setLastMessages(prev => ({ ...prev, [msg.chat]: msg }));
+      const chatId = msg.chat || msg.chatId;
+      setLastMessages(prev => ({ ...prev, [chatId]: msg }));
       setChats(prevChats => {
-        if (!prevChats.find(c => c._id === msg.chat)) {
+        if (!prevChats.find(c => c._id === chatId)) {
           api.get(`/chats/${user._id}`).then(res => setChats(res.data));
         }
         return prevChats;

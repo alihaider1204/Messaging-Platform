@@ -87,10 +87,12 @@ const ChatWindow = ({ selectedChat, selectedUser }) => {
   // Send message
   const handleSend = async ({ content, file }) => {
     let chat_id = chatId;
+    let isNewChat = false;
     if (!chat_id && selectedUser) {
       // Create chat if not exists
       const res = await api.post('/chats', { userId1: user._id, userId2: selectedUser._id });
       chat_id = res.data._id;
+      isNewChat = true;
     }
     let messageData = { chatId: chat_id, sender: user._id, content, type: file ? 'file' : 'text' };
     let newMsg;
@@ -104,10 +106,15 @@ const ChatWindow = ({ selectedChat, selectedUser }) => {
       const res = await api.post('/messages', messageData);
       newMsg = res.data;
     }
+    // Ensure newMsg has a 'chat' property for socket events
+    if (!newMsg.chat && newMsg.chatId) newMsg.chat = newMsg.chatId;
     setMessages((prev) => [...prev, newMsg]);
     socket.emit('send-message', { message: newMsg, receiverId: chatUser._id });
-    // Emit to self as well to trigger sidebar update
     socket.emit('send-message', { message: newMsg, receiverId: user._id });
+    if (isNewChat) {
+      // Notify both users to refresh their chat list
+      socket.emit('new-chat', { chatId: chat_id, users: [user._id, chatUser._id] });
+    }
     socket.emit('stop-typing', { chatId: chat_id, senderId: user._id, receiverId: chatUser._id });
   };
 

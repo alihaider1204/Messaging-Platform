@@ -43,7 +43,7 @@ const Chat = () => {
         <>
           {(!selectedChat && !selectedUser) && (
             <Drawer open={true} variant="persistent" anchor="left" PaperProps={{ sx: { width: 320 } }}>
-              <Sidebar selectedChat={selectedChat} onSelectChat={handleSelectChat} onlineUsers={onlineUsers} />
+              <Sidebar selectedChat={selectedChat} onSelectChat={handleSelectChat} onlineUsers={onlineUsers} onBack={handleBack} isMobile={isMobile} />
             </Drawer>
           )}
           {(selectedChat || selectedUser) && (

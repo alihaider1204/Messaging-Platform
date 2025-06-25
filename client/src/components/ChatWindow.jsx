@@ -10,9 +10,11 @@ import config from '../config';
 import Modal from '@mui/material/Modal';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
+import { useNavigate } from 'react-router-dom';
 
 const ChatWindow = ({ selectedChat, selectedUser }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
@@ -21,6 +23,17 @@ const ChatWindow = ({ selectedChat, selectedUser }) => {
   const typingTimeout = useRef();
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [modalImageUrl, setModalImageUrl] = useState(null);
+
+  // Add check for user authentication
+  useEffect(() => {
+    if (!user?._id) {
+      navigate('/login');
+      return;
+    }
+  }, [user, navigate]);
+
+  // If no user, return null to prevent any rendering errors
+  if (!user?._id) return null;
 
   // Define chatUser at the top before any useEffect
   const chatUser = selectedUser || selectedChat?.users?.find(u => u._id !== user._id);

@@ -49,11 +49,14 @@ const ChatWindow = ({ selectedChat, selectedUser }) => {
   // Real-time message receiving
   useEffect(() => {
     const handleReceive = (msg) => {
-      setMessages((prev) => [...prev, msg]);
+      // Only add the message if it's not from the current user
+      if (msg.sender !== user._id) {
+        setMessages((prev) => [...prev, msg]);
+      }
     };
     socket.on('receive-message', handleReceive);
     return () => socket.off('receive-message', handleReceive);
-  }, []);
+  }, [user._id]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -109,8 +112,8 @@ const ChatWindow = ({ selectedChat, selectedUser }) => {
     // Ensure newMsg has a 'chat' property for socket events
     if (!newMsg.chat && newMsg.chatId) newMsg.chat = newMsg.chatId;
     setMessages((prev) => [...prev, newMsg]);
+    // Only emit to the receiver, not to yourself
     socket.emit('send-message', { message: newMsg, receiverId: chatUser._id });
-    socket.emit('send-message', { message: newMsg, receiverId: user._id });
     if (isNewChat) {
       // Notify both users to refresh their chat list
       socket.emit('new-chat', { chatId: chat_id, users: [user._id, chatUser._id] });

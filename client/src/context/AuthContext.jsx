@@ -9,15 +9,34 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const navigate = useNavigate();
 
+  // Function to update user data
+  const updateUser = (userData) => {
+    if (userData) {
+      // Ensure we're using the server's user data directly
+      setUser(userData);
+      // Store user data in localStorage for persistence
+      localStorage.setItem('user', JSON.stringify(userData));
+    } else {
+      setUser(null);
+      localStorage.removeItem('user');
+    }
+  };
+
   useEffect(() => {
+    // Try to get user from localStorage first
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      updateUser(JSON.parse(storedUser));
+    }
+
     if (token) {
       localStorage.setItem('token', token);
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      // Fetch user profile for session management
+      // Fetch fresh user data from server
       api.get('/users/me')
-        .then(res => setUser(res.data))
+        .then(res => updateUser(res.data))
         .catch(() => {
-          setUser(null);
+          updateUser(null);
           setToken(null);
           localStorage.removeItem('token');
           delete api.defaults.headers.common['Authorization'];
@@ -26,35 +45,43 @@ export const AuthProvider = ({ children }) => {
     } else {
       localStorage.removeItem('token');
       delete api.defaults.headers.common['Authorization'];
-      setUser(null);
+      updateUser(null);
     }
     // eslint-disable-next-line
   }, [token]);
 
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
-    setUser(res.data.user);
+    updateUser(res.data.user);
     setToken(res.data.token);
     return res.data.user;
   };
 
   const register = async (name, email, password) => {
     const res = await api.post('/auth/register', { name, email, password });
-    setUser(res.data.user);
+    updateUser(res.data.user);
     setToken(res.data.token);
     return res.data.user;
   };
 
   const logout = () => {
-    setUser(null);
+    updateUser(null);
     setToken(null);
     localStorage.removeItem('token');
     delete api.defaults.headers.common['Authorization'];
     navigate('/login');
   };
 
+  // Expose updateUser in the context so components can update user data
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, setUser }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      token, 
+      login, 
+      register, 
+      logout, 
+      setUser: updateUser // Use updateUser instead of setUser directly
+    }}>
       {children}
     </AuthContext.Provider>
   );

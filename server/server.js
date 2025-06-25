@@ -12,10 +12,7 @@ console.log('Environment check:', {
   PORT: process.env.PORT
 });
 
-// Verify Cloudinary configuration
-verifyCloudinaryConfig();
-
-// Then import other modules
+// Import modules (including cloudinary utilities)
 import express from 'express';
 import http from 'http';
 import { Server as SocketServer } from 'socket.io';
@@ -28,6 +25,14 @@ import User from './models/User.js';
 import usersRoutes from './routes/users.js';
 import Message from './models/Message.js';
 import { verifyCloudinaryConfig } from './utils/cloudinary.js';
+
+// NOW verify Cloudinary configuration (after imports)
+try {
+  verifyCloudinaryConfig();
+} catch (error) {
+  console.error('Failed to verify Cloudinary configuration:', error.message);
+  console.log('Server will continue, but file uploads may not work properly');
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -116,6 +121,16 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Handle new chat creation
+  socket.on('new-chat', ({ chatId, users }) => {
+    users.forEach(userId => {
+      const userSocket = onlineUsers.get(userId);
+      if (userSocket) {
+        io.to(userSocket).emit('chat-created', { chatId });
+      }
+    });
+  });
+
   // Handle disconnect
   socket.on('disconnect', async () => {
     try {
@@ -138,4 +153,5 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });

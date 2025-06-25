@@ -4,7 +4,6 @@ import moment from 'moment';
 import { useAuth } from '../context/AuthContext';
 import DoneIcon from '@mui/icons-material/Done';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
-import config from '../config';
 import InsertDriveFileIcon from '@mui/icons-material/InsertDriveFile';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -12,9 +11,12 @@ import TableChartIcon from '@mui/icons-material/TableChart';
 import TextSnippetIcon from '@mui/icons-material/TextSnippet';
 import ArchiveIcon from '@mui/icons-material/Archive';
 
-const MessageBubble = ({ message, onImageClick }) => {
+const MessageBubble = ({ message, onImageClick, otherUser }) => {
   const { user } = useAuth();
   const isMine = message.sender?._id === user._id || message.sender === user._id;
+  
+  // Get sender info - use current user if it's my message, otherwise use otherUser or populated sender
+  const senderInfo = isMine ? user : (message.sender?.name ? message.sender : otherUser);
   
   // Check if message is an image
   const isImage = message.type === 'image' || 
@@ -30,8 +32,11 @@ const MessageBubble = ({ message, onImageClick }) => {
       alignItems: 'flex-end',
       mb: 1,
     }}>
-      <Avatar src={message.sender?.avatar ? `${config.BACKEND_URL}${message.sender.avatar}` : undefined} sx={{ width: 32, height: 32, mx: 1 }}>
-        {!message.sender?.avatar && message.sender?.name?.[0]}
+      <Avatar 
+        src={senderInfo?.avatar || undefined} 
+        sx={{ width: 32, height: 32, mx: 1 }}
+      >
+        {!senderInfo?.avatar && senderInfo?.name?.[0]}
       </Avatar>
       <Box sx={{
         maxWidth: '60%',

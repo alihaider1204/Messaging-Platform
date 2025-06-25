@@ -41,6 +41,7 @@ const Sidebar = ({ selectedChat, onSelectChat, onlineUsers, onBack, isMobile }) 
   // Listen for new messages and update last message in real time
   useEffect(() => {
     if (!user) return;
+    
     const handleReceive = (msg) => {
       const chatId = msg.chat || msg.chatId;
       setLastMessages(prev => ({ ...prev, [chatId]: msg }));
@@ -52,26 +53,13 @@ const Sidebar = ({ selectedChat, onSelectChat, onlineUsers, onBack, isMobile }) 
         return prevChats;
       });
     };
-    socket.on('receive-message', handleReceive);
-    // Listen for new-chat event
-    const handleNewChat = ({ chatId, users }) => {
-      if (users.includes(user._id)) {
-        api.get(`/chats/${user._id}`).then(res => setChats(res.data));
-      }
-    };
-    socket.on('new-chat', handleNewChat);
-    return () => {
-      socket.off('receive-message', handleReceive);
-      socket.off('new-chat', handleNewChat);
-    };
-  }, [user]);
 
-  // Also update last message when you send a message
-  useEffect(() => {
-    if (!user) return;
-    const handleSend = (msg) => {
-      const chatId = msg.chat || msg.chatId;
-      setLastMessages(prev => ({ ...prev, [chatId]: msg }));
+    const handleSend = (data) => {
+      // Handle messages sent by ANY user (including yourself) to update sidebar
+      const message = data.message || data;
+      const chatId = message.chat || message.chatId;
+      console.log('Sidebar received send-message:', message);
+      setLastMessages(prev => ({ ...prev, [chatId]: message }));
       setChats(prevChats => {
         if (!prevChats.find(c => c._id === chatId)) {
           api.get(`/chats/${user._id}`).then(res => setChats(res.data));
@@ -79,8 +67,22 @@ const Sidebar = ({ selectedChat, onSelectChat, onlineUsers, onBack, isMobile }) 
         return prevChats;
       });
     };
+
+    const handleNewChat = ({ chatId, users }) => {
+      if (users.includes(user._id)) {
+        api.get(`/chats/${user._id}`).then(res => setChats(res.data));
+      }
+    };
+
+    socket.on('receive-message', handleReceive);
     socket.on('send-message', handleSend);
-    return () => socket.off('send-message', handleSend);
+    socket.on('new-chat', handleNewChat);
+    
+    return () => {
+      socket.off('receive-message', handleReceive);
+      socket.off('send-message', handleSend);
+      socket.off('new-chat', handleNewChat);
+    };
   }, [user]);
 
   // Early return ONLY after ALL hooks are declared
@@ -132,7 +134,7 @@ const Sidebar = ({ selectedChat, onSelectChat, onlineUsers, onBack, isMobile }) 
                   overlap="circular"
                   anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 >
-                  <Avatar src={otherUser.avatar ? `${config.BACKEND_URL}${otherUser.avatar}` : undefined}>
+                  <Avatar src={otherUser.avatar || undefined}>
                     {!otherUser.avatar && otherUser.name[0]}
                   </Avatar>
                 </Badge>
@@ -166,7 +168,7 @@ const Sidebar = ({ selectedChat, onSelectChat, onlineUsers, onBack, isMobile }) 
                   overlap="circular"
                   anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                 >
-                  <Avatar src={u.avatar ? `${config.BACKEND_URL}${u.avatar}` : undefined}>
+                  <Avatar src={u.avatar || undefined}>
                     {!u.avatar && u.name[0]}
                   </Avatar>
                 </Badge>

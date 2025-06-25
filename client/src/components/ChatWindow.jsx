@@ -49,8 +49,8 @@ const ChatWindow = ({ selectedChat, selectedUser }) => {
   // Real-time message receiving
   useEffect(() => {
     const handleReceive = (msg) => {
-      // Only add the message if it's not from the current user
-      if (msg.sender !== user._id) {
+      // Only add messages from other users, not from yourself
+      if (msg.sender !== user._id && msg.sender?._id !== user._id) {
         setMessages((prev) => [...prev, msg]);
       }
     };
@@ -111,9 +111,15 @@ const ChatWindow = ({ selectedChat, selectedUser }) => {
     }
     // Ensure newMsg has a 'chat' property for socket events
     if (!newMsg.chat && newMsg.chatId) newMsg.chat = newMsg.chatId;
+    
     setMessages((prev) => [...prev, newMsg]);
-    // Only emit to the receiver, not to yourself
-    socket.emit('send-message', { message: newMsg, receiverId: chatUser._id });
+    
+    // Emit to the receiver for their chat window
+    socket.emit('receive-message', { ...newMsg, receiverId: chatUser._id });
+    
+    // Emit to yourself for sidebar update only (not chat window)
+    socket.emit('send-message', { message: newMsg, receiverId: user._id });
+    
     if (isNewChat) {
       // Notify both users to refresh their chat list
       socket.emit('new-chat', { chatId: chat_id, users: [user._id, chatUser._id] });
@@ -167,7 +173,7 @@ const ChatWindow = ({ selectedChat, selectedUser }) => {
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', bgcolor: '#ece5dd' }}>
       {/* Chat header */}
       <Box sx={{ p: 2, display: 'flex', alignItems: 'center', borderBottom: 1, borderColor: 'divider', bgcolor: '#f0f0f0' }}>
-        <Avatar src={chatUser?.avatar ? `${config.BACKEND_URL}${chatUser.avatar}` : undefined} sx={{ mr: 2 }}>
+        <Avatar src={chatUser?.avatar || undefined} sx={{ mr: 2 }}>
           {!chatUser?.avatar && chatUser?.name?.[0]}
         </Avatar>
         <Box>
@@ -180,7 +186,12 @@ const ChatWindow = ({ selectedChat, selectedUser }) => {
         {loading ? <CircularProgress /> : (
           <>
             {messages.map(msg => (
-              <MessageBubble key={msg._id} message={msg} onImageClick={handleImageClick} />
+              <MessageBubble 
+                key={msg._id} 
+                message={msg} 
+                onImageClick={handleImageClick} 
+                otherUser={chatUser}
+              />
             ))}
             {/* Show animated typing indicator in message area if other user is typing */}
             {otherTyping && <TypingIndicator isTyping={true} />}
@@ -203,24 +214,24 @@ const ChatWindow = ({ selectedChat, selectedUser }) => {
         <Box sx={{ position: 'relative', outline: 'none' }}>
           <IconButton
             onClick={handleModalClose}
-            sx={{ position: 'absolute', top: 8, right: 8, zIndex: 2, bgcolor: 'rgba(255,255,255,0.7)' }}
-            aria-label="Close"
+            sx={{
+              position: 'absolute',
+              right: -40,
+              top: -40,
+              color: 'white'
+            }}
           >
-            <CloseIcon fontSize="large" />
+            <CloseIcon />
           </IconButton>
-          {modalImageUrl && (
-            <img
-              src={modalImageUrl}
-              alt="Enlarged preview"
-              style={{
-                maxWidth: '90vw',
-                maxHeight: '90vh',
-                borderRadius: 12,
-                boxShadow: '0 4px 32px rgba(0,0,0,0.25)',
-                display: 'block',
-              }}
-            />
-          )}
+          <img
+            src={modalImageUrl}
+            alt="Full size"
+            style={{
+              maxHeight: '90vh',
+              maxWidth: '90vw',
+              objectFit: 'contain'
+            }}
+          />
         </Box>
       </Modal>
     </Box>

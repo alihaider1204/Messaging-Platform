@@ -11,7 +11,7 @@ import TableChartIcon from '@mui/icons-material/TableChart';
 import TextSnippetIcon from '@mui/icons-material/TextSnippet';
 import ArchiveIcon from '@mui/icons-material/Archive';
 
-const MessageBubble = ({ message, onImageClick, otherUser }) => {
+const MessageBubble = ({ message, onImageClick, otherUser, isDelivered, isReceiverOnline }) => {
   const { user } = useAuth();
   const isMine = message.sender?._id === user._id || message.sender === user._id;
   
@@ -118,14 +118,23 @@ const MessageBubble = ({ message, onImageClick, otherUser }) => {
           )
         )}
         
-        {/* Timestamp and seen indicators */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mt: 0.5 }}>
-          <Typography variant="caption" sx={{ color: 'grey.600', mr: 0.5 }}>
+        {/* Timestamp and tick indicators */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', mt: 0.5, gap: 0.3 }}>
+          <Typography variant="caption" sx={{ color: 'grey.600' }}>
             {moment(message.createdAt).format('h:mm A')}
           </Typography>
-          {isMine && (
-            message.seen ? <DoneAllIcon fontSize="small" color="primary" /> : <DoneIcon fontSize="small" color="disabled" />
-          )}
+          {isMine && (() => {
+            if (message.seen) {
+              // Blue double tick — read
+              return <DoneAllIcon sx={{ fontSize: 16, color: '#34B7F1' }} />;
+            }
+            if (isDelivered || isReceiverOnline) {
+              // Grey double tick — delivered
+              return <DoneAllIcon sx={{ fontSize: 16, color: '#999' }} />;
+            }
+            // Single grey tick — sent only
+            return <DoneIcon sx={{ fontSize: 16, color: '#999' }} />;
+          })()}
         </Box>
       </Box>
     </Box>

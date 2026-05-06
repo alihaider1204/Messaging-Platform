@@ -1,7 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Grid, useMediaQuery, Drawer, IconButton, Box } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Box, useMediaQuery } from '@mui/material';
 import Sidebar from '../components/Sidebar';
 import ChatWindow from '../components/ChatWindow';
 import socket from '../utils/socket';
@@ -12,8 +10,16 @@ const Chat = () => {
   const [selectedChat, setSelectedChat] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [onlineUsers, setOnlineUsers] = useState([]);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isMobile = useMediaQuery('(max-width:600px)');
+  const [sidebarDataReady, setSidebarDataReady] = useState(false);
+  const isMobile = useMediaQuery('(max-width:960px)');
+
+  useEffect(() => {
+    if (user?._id) setSidebarDataReady(false);
+  }, [user?._id]);
+
+  const handleSidebarDataReadyChange = useCallback((ready) => {
+    setSidebarDataReady(!!ready);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -29,7 +35,6 @@ const Chat = () => {
   const handleSelectChat = (chat, userToChat) => {
     setSelectedChat(chat);
     setSelectedUser(userToChat || null);
-    if (isMobile) setSidebarOpen(false);
   };
 
   const handleBack = () => {
@@ -37,38 +42,67 @@ const Chat = () => {
     setSelectedUser(null);
   };
 
+  const hasActiveChat = selectedChat || selectedUser;
+
   return (
-    <Box sx={{ height: '100vh', width: '100vw', overflow: 'hidden' }}>
+    <Box sx={{ height: '100dvh', width: '100vw', overflow: 'hidden', display: 'flex' }}>
       {isMobile ? (
+        /* Mobile / Tablet: show sidebar OR chat, not both */
         <>
-          {(!selectedChat && !selectedUser) && (
-            <Drawer open={true} variant="persistent" anchor="left" PaperProps={{ sx: { width: 320 } }}>
-              <Sidebar selectedChat={selectedChat} onSelectChat={handleSelectChat} onlineUsers={onlineUsers} onBack={handleBack} isMobile={isMobile} />
-            </Drawer>
+          {!hasActiveChat && (
+            <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Sidebar
+                selectedChat={selectedChat}
+                onSelectChat={handleSelectChat}
+                onlineUsers={onlineUsers}
+                isMobile={isMobile}
+                onSidebarDataReadyChange={handleSidebarDataReadyChange}
+              />
+            </Box>
           )}
-          {(selectedChat || selectedUser) && (
-            <Box sx={{ height: '100vh', width: '100vw', position: 'relative' }}>
-              <IconButton onClick={handleBack} sx={{ position: 'absolute', top: 8, left: 8, zIndex: 10, bgcolor: 'white' }}>
-                <ArrowBackIcon />
-              </IconButton>
-              <Box sx={{ pt: 6 }}>
-                <ChatWindow selectedChat={selectedChat} selectedUser={selectedUser} />
-              </Box>
+          {hasActiveChat && (
+            <Box sx={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <ChatWindow
+                selectedChat={selectedChat}
+                selectedUser={selectedUser}
+                onlineUsers={onlineUsers}
+                onBack={handleBack}
+                bootstrapSkeleton={!sidebarDataReady}
+              />
             </Box>
           )}
         </>
       ) : (
-        <Grid container>
-          <Grid item sx={{ width: 320, borderRight: 1, borderColor: 'divider' }}>
-            <Sidebar selectedChat={selectedChat} onSelectChat={handleSelectChat} onlineUsers={onlineUsers} />
-          </Grid>
-          <Grid item xs>
-            <ChatWindow selectedChat={selectedChat} selectedUser={selectedUser} />
-          </Grid>
-        </Grid>
+        /* Desktop: sidebar + chat side-by-side, both are equal-height flex children */
+        <>
+          <Box sx={{
+            width: 320,
+            flexShrink: 0,
+            borderRight: '1px solid',
+            borderColor: 'divider',
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+          }}>
+            <Sidebar
+              selectedChat={selectedChat}
+              onSelectChat={handleSelectChat}
+              onlineUsers={onlineUsers}
+              onSidebarDataReadyChange={handleSidebarDataReadyChange}
+            />
+          </Box>
+          <Box sx={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <ChatWindow
+              selectedChat={selectedChat}
+              selectedUser={selectedUser}
+              onlineUsers={onlineUsers}
+              bootstrapSkeleton={!sidebarDataReady}
+            />
+          </Box>
+        </>
       )}
     </Box>
   );
 };
 
-export default Chat; 
+export default Chat;

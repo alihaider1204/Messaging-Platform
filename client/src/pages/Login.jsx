@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Box, Typography, TextField, Button, Alert, InputAdornment, IconButton } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import LockIcon from '@mui/icons-material/Lock';
@@ -12,17 +12,37 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
+  const { login, authTransition } = useAuth();
+  const darkInputSx = {
+    bgcolor: 'rgba(0,0,0,0.25)',
+    borderRadius: 1,
+    input: { color: '#fff' },
+    '& input:-webkit-autofill': {
+      WebkitBoxShadow: '0 0 0 100px rgba(0,0,0,0.25) inset',
+      WebkitTextFillColor: '#fff',
+      caretColor: '#fff',
+      borderRadius: 4,
+      transition: 'background-color 9999s ease-out 0s',
+    },
+    '& input:-webkit-autofill:hover, & input:-webkit-autofill:focus': {
+      WebkitBoxShadow: '0 0 0 100px rgba(0,0,0,0.25) inset',
+      WebkitTextFillColor: '#fff',
+      caretColor: '#fff',
+    },
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (submitting || authTransition) return;
+    setSubmitting(true);
     try {
       await login(email, password);
-      navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -79,6 +99,7 @@ const Login = () => {
               fullWidth
               placeholder="Email"
               type="email"
+              disabled={submitting}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -86,9 +107,7 @@ const Login = () => {
                   </InputAdornment>
                 ),
                 sx: {
-                  bgcolor: 'rgba(0,0,0,0.25)',
-                  borderRadius: 1,
-                  input: { color: '#fff' },
+                  ...darkInputSx,
                 },
               }}
               value={email}
@@ -116,25 +135,26 @@ const Login = () => {
                       edge="end"
                       tabIndex={-1}
                       sx={{ color: '#b2fefa' }}
+                      disabled={submitting}
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
                 ),
                 sx: {
-                  bgcolor: 'rgba(0,0,0,0.25)',
-                  borderRadius: 1,
-                  input: { color: '#fff' },
+                  ...darkInputSx,
                 },
               }}
               value={password}
               onChange={e => setPassword(e.target.value)}
               autoComplete="current-password"
+              disabled={submitting}
             />
             <Button
               type="submit"
               fullWidth
               variant="contained"
+              disabled={submitting}
               sx={{
                 mt: 3,
                 mb: 2,
@@ -146,7 +166,7 @@ const Login = () => {
                 '&:hover': { bgcolor: '#2af598', color: '#111' },
               }}
             >
-              LOGIN
+              {submitting ? 'Please wait…' : 'LOGIN'}
             </Button>
           </Box>
           <Button
@@ -154,6 +174,7 @@ const Login = () => {
             to="/register"
             fullWidth
             variant="contained"
+            disabled={submitting}
             sx={{
               mt: 2,
               bgcolor: '#2af598',

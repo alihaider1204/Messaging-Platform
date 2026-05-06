@@ -1,9 +1,18 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   font-family: 'Segoe UI', 'Roboto', 'Arial', sans-serif;
   background: #ece5dd;
+  /* Prevent pull-to-refresh on mobile */
+  overscroll-behavior: none;
 }
 
 #root {
-  height: 100vh;
+  height: 100dvh; /* dvh handles iOS Safari address bar correctly */
+  overflow: hidden;
 } 

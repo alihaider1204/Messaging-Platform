@@ -4,17 +4,22 @@ import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext();
 
+/** Fullscreen overlay duration before routes change (~2–3s) */
+const AUTH_TRANSITION_MS = 2600;
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [token, setToken] = useState(() => localStorage.getItem('token'));
+  const [loading, setLoading] = useState(!!localStorage.getItem('token'));
+  /** null | 'logging-in' | 'logging-out' — drives global overlay */
+  const [authTransition, setAuthTransition] = useState(null);
   const navigate = useNavigate();
 
-  // Function to update user data
   const updateUser = (userData) => {
     if (userData) {
-      // Ensure we're using the server's user data directly
       setUser(userData);
-      // Store user data in localStorage for persistence
       localStorage.setItem('user', JSON.stringify(userData));
     } else {
       setUser(null);
@@ -23,68 +28,92 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    // Try to get user from localStorage first
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      updateUser(JSON.parse(storedUser));
-    }
-
     if (token) {
-      localStorage.setItem('token', token);
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      // Fetch fresh user data from server
+      localStorage.setItem('token', token);
+
+      const stored = localStorage.getItem('user');
+      if (stored) {
+        try { updateUser(JSON.parse(stored)); } catch { /* ignore */ }
+      }
+
       api.get('/users/me')
-        .then(res => updateUser(res.data))
+        .then((res) => {
+          updateUser(res.data);
+        })
         .catch(() => {
           updateUser(null);
           setToken(null);
           localStorage.removeItem('token');
           delete api.defaults.headers.common['Authorization'];
           navigate('/login');
+        })
+        .finally(() => {
+          setLoading(false);
         });
     } else {
       localStorage.removeItem('token');
       delete api.defaults.headers.common['Authorization'];
       updateUser(null);
+      setLoading(false);
     }
-    // eslint-disable-next-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
-    updateUser(res.data.user);
-    setToken(res.data.token);
-    return res.data.user;
+    setAuthTransition('logging-in');
+    try {
+      await delay(AUTH_TRANSITION_MS);
+      updateUser(res.data.user);
+      setToken(res.data.token);
+      return res.data.user;
+    } finally {
+      setAuthTransition(null);
+    }
   };
 
   const register = async (name, email, password) => {
     const res = await api.post('/auth/register', { name, email, password });
-    updateUser(res.data.user);
-    setToken(res.data.token);
-    return res.data.user;
+    setAuthTransition('logging-in');
+    try {
+      await delay(AUTH_TRANSITION_MS);
+      updateUser(res.data.user);
+      setToken(res.data.token);
+      return res.data.user;
+    } finally {
+      setAuthTransition(null);
+    }
   };
 
   const logout = () => {
-    updateUser(null);
-    setToken(null);
-    localStorage.removeItem('token');
-    delete api.defaults.headers.common['Authorization'];
-    navigate('/login');
+    setAuthTransition('logging-out');
+    window.setTimeout(() => {
+      updateUser(null);
+      setToken(null);
+      localStorage.removeItem('token');
+      delete api.defaults.headers.common['Authorization'];
+      setAuthTransition(null);
+      navigate('/login');
+    }, AUTH_TRANSITION_MS);
   };
 
-  // Expose updateUser in the context so components can update user data
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      token, 
-      login, 
-      register, 
-      logout, 
-      setUser: updateUser // Use updateUser instead of setUser directly
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        loading,
+        authTransition,
+        login,
+        register,
+        logout,
+        setUser: updateUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => useContext(AuthContext); 
+export const useAuth = () => useContext(AuthContext);

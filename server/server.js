@@ -1,18 +1,6 @@
-// Load environment variables FIRST
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Debug: Check if env vars are loaded
-console.log('Environment check:', {
-  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
-  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
-  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET ? '***' : 'undefined',
-  MONGO_URI: process.env.MONGO_URI ? '***' : 'undefined',
-  JWT_SECRET: process.env.JWT_SECRET ? '***' : 'undefined',
-  PORT: process.env.PORT
-});
-
-// Import modules (including cloudinary utilities)
 import express from 'express';
 import http from 'http';
 import { Server as SocketServer } from 'socket.io';
@@ -26,33 +14,36 @@ import usersRoutes from './routes/users.js';
 import Message from './models/Message.js';
 import { verifyCloudinaryConfig } from './utils/cloudinary.js';
 
-// NOW verify Cloudinary configuration (after imports)
+// Verify Cloudinary config on startup
 try {
   verifyCloudinaryConfig();
 } catch (error) {
-  console.error('Failed to verify Cloudinary configuration:', error.message);
-  console.log('Server will continue, but file uploads may not work properly');
+  console.error('Cloudinary configuration error:', error.message);
+  console.log('File uploads may not work until Cloudinary is configured.');
 }
 
 const app = express();
 const server = http.createServer(app);
+
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
 const io = new SocketServer(server, {
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
-  }
+    origin: [FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3000'],
+    methods: ['GET', 'POST'],
+  },
 });
 
-// Middleware
-app.use(cors());
+app.use(cors({
+  origin: [FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3000'],
+}));
 app.use(express.json());
 
-// MongoDB connection
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/whatsapp-clone', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-}).then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
+// MongoDB connection (no deprecated options for Mongoose 7+)
+mongoose
+  .connect(process.env.MONGO_URI || 'mongodb://localhost:27017/whatsapp-clone')
+  .then(() => console.log('MongoDB connected'))
+  .catch((err) => console.error('MongoDB connection error:', err));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -67,22 +58,23 @@ app.get('/', (req, res) => {
 // --- Socket.IO Real-Time Logic ---
 const onlineUsers = new Map(); // userId -> socketId
 
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+// Helper: check if a string is a valid MongoDB ObjectId
+const isValidObjectId = (id) => /^[a-f\d]{24}$/i.test(id);
 
-  // User joins with their userId
+io.on('connection', (socket) => {
+  // User joins — validate userId format before trusting it
   socket.on('join', async (userId) => {
+    if (!userId || !isValidObjectId(userId)) return;
     try {
       onlineUsers.set(userId, socket.id);
       await User.findByIdAndUpdate(userId, { online: true });
       io.emit('online-users', Array.from(onlineUsers.keys()));
-      console.log(`User ${userId} joined with socket ${socket.id}`);
     } catch (error) {
       console.error('Error in join event:', error);
     }
   });
 
-  // Typing indicator
+  // Typing indicators — forward to receiver only
   socket.on('typing', ({ chatId, senderId, receiverId }) => {
     const receiverSocket = onlineUsers.get(receiverId);
     if (receiverSocket) {
@@ -97,7 +89,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Send message
+  // Deliver a message to the specified receiver
   socket.on('send-message', ({ message, receiverId }) => {
     const receiverSocket = onlineUsers.get(receiverId);
     if (receiverSocket) {
@@ -105,7 +97,15 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Mark messages as seen
+  // Delivery confirmation — receiver tells sender the message arrived
+  socket.on('message-delivered', ({ messageId, senderId }) => {
+    const senderSocket = onlineUsers.get(senderId);
+    if (senderSocket) {
+      io.to(senderSocket).emit('message-delivered', { messageId });
+    }
+  });
+
+  // Mark messages as seen and notify the sender
   socket.on('seen-messages', async ({ chatId, userId, senderId }) => {
     try {
       await Message.updateMany(
@@ -121,9 +121,9 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle new chat creation
+  // Notify users when a new chat is created
   socket.on('new-chat', ({ chatId, users }) => {
-    users.forEach(userId => {
+    users.forEach((userId) => {
       const userSocket = onlineUsers.get(userId);
       if (userSocket) {
         io.to(userSocket).emit('chat-created', { chatId });
@@ -138,12 +138,10 @@ io.on('connection', (socket) => {
         if (sockId === socket.id) {
           onlineUsers.delete(userId);
           await User.findByIdAndUpdate(userId, { online: false });
-          console.log(`User ${userId} disconnected`);
           break;
         }
       }
       io.emit('online-users', Array.from(onlineUsers.keys()));
-      console.log('User disconnected:', socket.id);
     } catch (error) {
       console.error('Error in disconnect event:', error);
     }
@@ -152,6 +150,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Server running on port ${PORT} (${process.env.NODE_ENV || 'development'})`);
 });

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Box, Typography, TextField, Button, Alert, InputAdornment, IconButton } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import LockIcon from '@mui/icons-material/Lock';
@@ -13,17 +13,37 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const { register } = useAuth();
-  const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
+  const { register, authTransition } = useAuth();
+  const darkInputSx = {
+    bgcolor: 'rgba(0,0,0,0.25)',
+    borderRadius: 1,
+    input: { color: '#fff' },
+    '& input:-webkit-autofill': {
+      WebkitBoxShadow: '0 0 0 100px rgba(0,0,0,0.25) inset',
+      WebkitTextFillColor: '#fff',
+      caretColor: '#fff',
+      borderRadius: 4,
+      transition: 'background-color 9999s ease-out 0s',
+    },
+    '& input:-webkit-autofill:hover, & input:-webkit-autofill:focus': {
+      WebkitBoxShadow: '0 0 0 100px rgba(0,0,0,0.25) inset',
+      WebkitTextFillColor: '#fff',
+      caretColor: '#fff',
+    },
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (submitting || authTransition) return;
+    setSubmitting(true);
     try {
       await register(name, email, password);
-      navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -79,6 +99,7 @@ const Register = () => {
               required
               fullWidth
               placeholder="Name"
+              disabled={submitting}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -86,9 +107,7 @@ const Register = () => {
                   </InputAdornment>
                 ),
                 sx: {
-                  bgcolor: 'rgba(0,0,0,0.25)',
-                  borderRadius: 1,
-                  input: { color: '#fff' },
+                  ...darkInputSx,
                 },
               }}
               value={name}
@@ -101,6 +120,7 @@ const Register = () => {
               fullWidth
               placeholder="Email"
               type="email"
+              disabled={submitting}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -108,9 +128,7 @@ const Register = () => {
                   </InputAdornment>
                 ),
                 sx: {
-                  bgcolor: 'rgba(0,0,0,0.25)',
-                  borderRadius: 1,
-                  input: { color: '#fff' },
+                  ...darkInputSx,
                 },
               }}
               value={email}
@@ -138,25 +156,26 @@ const Register = () => {
                       edge="end"
                       tabIndex={-1}
                       sx={{ color: '#b2fefa' }}
+                      disabled={submitting}
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
                   </InputAdornment>
                 ),
                 sx: {
-                  bgcolor: 'rgba(0,0,0,0.25)',
-                  borderRadius: 1,
-                  input: { color: '#fff' },
+                  ...darkInputSx,
                 },
               }}
               value={password}
               onChange={e => setPassword(e.target.value)}
               autoComplete="new-password"
+              disabled={submitting}
             />
             <Button
               type="submit"
               fullWidth
               variant="contained"
+              disabled={submitting}
               sx={{
                 mt: 3,
                 mb: 2,
@@ -168,7 +187,7 @@ const Register = () => {
                 '&:hover': { bgcolor: '#2af598', color: '#111' },
               }}
             >
-              REGISTER
+              {submitting ? 'Please wait…' : 'REGISTER'}
             </Button>
           </Box>
           <Button
@@ -176,6 +195,7 @@ const Register = () => {
             to="/login"
             fullWidth
             variant="contained"
+            disabled={submitting}
             sx={{
               mt: 2,
               bgcolor: '#2af598',

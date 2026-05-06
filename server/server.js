@@ -52,7 +52,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/users', usersRoutes);
 
 app.get('/', (req, res) => {
-  res.send('WhatsApp Clone API Running');
+  res.send('ChatSphere- Realtime Messaging App API Running');
 });
 
 // --- Socket.IO Real-Time Logic ---
